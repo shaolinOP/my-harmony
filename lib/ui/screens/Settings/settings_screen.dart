@@ -17,6 +17,7 @@ import '/ui/player/player_controller.dart';
 import '/ui/utils/theme_controller.dart';
 import 'components/custom_expansion_tile.dart';
 import 'settings_screen_controller.dart';
+import 'lyrics_settings_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key, this.isBottomNavActive = false});
@@ -450,6 +451,16 @@ class SettingsScreen extends StatelessWidget {
                         }
                       },
                     ),
+                  ListTile(
+                    contentPadding:
+                        const EdgeInsets.only(left: 5, right: 10, top: 0),
+                    title: const Text("Lyrics Settings"),
+                    subtitle: const Text("Configure lyrics providers and display",
+                        style: TextStyle(fontSize: 12)),
+                    onTap: () {
+                      Get.to(() => const LyricsSettingsScreen());
+                    },
+                  ),
                   if (!isDesktop)
                     ListTile(
                       contentPadding: const EdgeInsets.only(left: 5, right: 10),

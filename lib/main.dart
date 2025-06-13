@@ -21,6 +21,7 @@ import 'ui/screens/Home/home_screen_controller.dart';
 import 'ui/screens/Library/library_controller.dart';
 import 'utils/system_tray.dart';
 import 'utils/update_check_flag_file.dart';
+import '/models/lyrics_entity.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -109,6 +110,10 @@ initHive() async {
         (await getApplicationDocumentsDirectory()).path;
   }
   await Hive.initFlutter(applicationDataDirectoryPath);
+  
+  // Register adapters
+  Hive.registerAdapter(LyricsEntityAdapter());
+  
   await Hive.openBox("SongsCache");
   await Hive.openBox("SongDownloads");
   await Hive.openBox('SongsUrlCache');

@@ -10,7 +10,8 @@ import '../../models/playling_from.dart';
 import '../../services/downloader.dart';
 import '../screens/Playlist/playlist_screen_controller.dart';
 import '../widgets/snackbar.dart';
-import '/services/synced_lyrics_service.dart';
+import '/services/lyrics/advanced_lyrics_service.dart';
+import '/models/lyrics_entity.dart';
 import '/ui/screens/Settings/settings_screen_controller.dart';
 import '../../services/windows_audio_service.dart';
 import '../../utils/helper.dart';
@@ -69,6 +70,7 @@ class PlayerController extends GetxController
       UINetease(highlight: true, defaultSize: 20, defaultExtSize: 12);
   RxMap<String, dynamic> lyrics =
       <String, dynamic>{"synced": "", "plainLyrics": ""}.obs;
+  final currentLyricsEntity = Rxn<LyricsEntity>();
   ScrollController scrollController = ScrollController();
   final GlobalKey<ScaffoldState> homeScaffoldkey = GlobalKey<ScaffoldState>();
 
@@ -709,30 +711,44 @@ class PlayerController extends GetxController
     showLyricsflag.value = !showLyricsflag.value;
     if ((lyrics["synced"].isEmpty && lyrics['plainLyrics'].isEmpty) &&
         showLyricsflag.value) {
-      isLyricsLoading.value = true;
-      try {
-        final Map<String, dynamic>? lyricsR =
-            await SyncedLyricsService.getSyncedLyrics(
-                currentSong.value!, progressBarStatus.value.total.inSeconds);
-        if (lyricsR != null) {
-          lyrics.value = lyricsR;
-          isLyricsLoading.value = false;
-          return;
-        }
-        final related = await _musicServices.getWatchPlaylist(
-            videoId: currentSong.value!.id, onlyRelated: true);
-        final relatedLyricsId = related['lyrics'];
-        if (relatedLyricsId != null) {
-          final lyrics_ = await _musicServices.getLyrics(relatedLyricsId);
-          lyrics.value = {"synced": "", "plainLyrics": lyrics_};
+      await loadLyrics();
+    }
+  }
+
+  Future<void> loadLyrics() async {
+    if (currentSong.value == null) return;
+    
+    isLyricsLoading.value = true;
+    try {
+      final lyricsEntity = await AdvancedLyricsService.getLyrics(currentSong.value!);
+      currentLyricsEntity.value = lyricsEntity;
+      
+      if (lyricsEntity != null && lyricsEntity.hasLyrics) {
+        if (lyricsEntity.isSynced) {
+          lyrics.value = {"synced": lyricsEntity.lyrics, "plainLyrics": ""};
         } else {
+          lyrics.value = {"synced": "", "plainLyrics": lyricsEntity.lyrics};
+        }
+      } else {
+        // Fallback to old method for YouTube Music lyrics
+        try {
+          final related = await _musicServices.getWatchPlaylist(
+              videoId: currentSong.value!.id, onlyRelated: true);
+          final relatedLyricsId = related['lyrics'];
+          if (relatedLyricsId != null) {
+            final lyrics_ = await _musicServices.getLyrics(relatedLyricsId);
+            lyrics.value = {"synced": "", "plainLyrics": lyrics_};
+          } else {
+            lyrics.value = {"synced": "", "plainLyrics": "NA"};
+          }
+        } catch (e) {
           lyrics.value = {"synced": "", "plainLyrics": "NA"};
         }
-      } catch (e) {
-        lyrics.value = {"synced": "", "plainLyrics": "NA"};
       }
-      isLyricsLoading.value = false;
+    } catch (e) {
+      lyrics.value = {"synced": "", "plainLyrics": "NA"};
     }
+    isLyricsLoading.value = false;
   }
 
   void changeLyricsMode(int? val) {
